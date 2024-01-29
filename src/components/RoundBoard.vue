@@ -1,5 +1,12 @@
 <template>
   <div
+    class="wrap"
+    style="display: none"
+    :style="{ width: hideresumeclicked ? '5vw' : '100vw' }"
+  >
+    <div class="hidawrap" @click="hideresumeclicked = !hideresumeclicked"></div>
+  </div>
+  <div
     :style="{ display: 'none!important' }"
     style="position: relative; border: none; border-radius: 0; opacity: 0.5"
     class="alert alert-success m-0 row"
@@ -31,53 +38,10 @@
   <div class="row m-0" style="">
     <div class="">
       <div class="form-group">
-        <div v-if="!hideclicked" class="row inputs">
-          <div class="imp col-md-6 col-6 px-1">api url</div>
-
-          <input
-            class="imp col-md-6 col-6 px-1"
-            title="api url"
-            v-model="api_url"
-            @change="urlchange"
-          />
-
-          <input
-            class="impn imp col-md-3 col-12 px-1"
-            title="game_id"
-            v-model="game_id"
-          />
-
-          <input
-            class="imp impn col-md-3 col-12 px-1"
-            title="user_uid"
-            v-model="user_uid"
-          />
-
-          <div class="imp col-md-2 col-6 px-1">name</div>
-
-          <input
-            class="imp col-md-2 col-6 px-1"
-            title="user_name"
-            v-model="user_name"
-            @change="usernameChange"
-          />
-
-          <div class="imp col-md-2 col-6 px-1">order</div>
-          <input
-            class="imp col-md-2 col-6 px-1"
-            title="user_id"
-            v-model="user_id"
-          />
-
-          <div class="imp col-md-2 col-6 px-1">nbplayers</div>
-
-          <input
-            class="imp col-md-2 col-6 px-1"
-            title="np_players"
-            v-model="np_players"
-          />
-        </div>
-        <div class="row" style="background-color: rgba(255, 50, 0, 0.2)">
+        <div
+          class="row"
+          style="display: none; background-color: rgba(255, 50, 0, 0.2)"
+        >
           <div
             class="col-12"
             @click="hideclicked = !hideclicked"
@@ -152,15 +116,6 @@
               "
             />
             <span class="img-txt"> refresh </span>
-          </div>
-          <div @click="initGame" class="btn-container">
-            <img
-              class="btn-img"
-              v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
-              "
-            />
-            <span class="img-txt"> init </span>
           </div>
         </div>
       </div>
@@ -302,7 +257,7 @@
           <div class="d-flex p-1">
             <div class="m-2" style="width: 10vw; overflow: hidden">
               <input
-                v-if="player.cards[0].number != undefined"
+                v-if="player.uid != undefined"
                 class=""
                 style="
                   border: solid 1px rgba(0, 0, 0, 0.1);
@@ -395,48 +350,15 @@
 </template>
 
 <script>
-import * as axios from "axios";
 import draggable from "vuedraggable";
 import { reactive } from "vue";
-import { io } from "socket.io-client";
-let query = document.location.search;
-const urlParams = new URLSearchParams(query);
-let game_id = urlParams.get("game_id");
-let user_uid = urlParams.get("user_uid");
-let user_id = urlParams.get("user_id");
-if (game_id) localStorage.setItem("game_id", game_id);
-if (user_uid) localStorage.setItem("user_uid", user_uid);
-if (user_id) localStorage.setItem("user_id", user_id);
-console.log(game_id);
+import { ax, socket } from "./api.js";
 
-// "undefined" means the URL will be computed from the `window.location` object
-//process.env.NODE_ENV = "production";
-let api_url = localStorage.getItem("api_url") || undefined;
-const URL =
-  process.env.NODE_ENV === "production" ? api_url : "http://192.168.1.188:8086";
-
-export const state = reactive({
+/*export const state = reactive({
   connected: false,
   fooEvents: [],
   barEvents: [],
-});
-
-export const socket = io(URL);
-socket.on("connect", () => {
-  state.connected = true;
-});
-
-socket.on();
-
-socket.on("disconnect", () => {
-  state.connected = false;
-});
-
-socket.on("foo", (...args) => {
-  state.fooEvents.push(args);
-});
-
-socket.emit("join", { room: "someroom", username: "someuser" });
+});*/
 
 let cardsBase = Array.from(Array(26))
   .flatMap((v, i) => [
@@ -471,24 +393,15 @@ function shuffle(array) {
   return array;
 }
 
-let ax = new axios.Axios({
-  baseURL:
-    process.env.NODE_ENV === "production"
-      ? api_url
-      : "http://192.168.1.188:8086",
-});
 let id = 1;
 export default {
-  name: "simpleList",
+  props: ["porder", "user_uid", "game_uid", "p_order", "round_uid"],
+  name: "RoundBoard",
   display: "Simple",
-  order: 0,
-  players: [],
-  fullcard: true,
-  cardback: require("../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg"),
-  reactive: reactive,
   components: {
     draggable,
   },
+  setup() {},
   data() {
     return {
       enabled: true,
@@ -498,16 +411,14 @@ export default {
       user_name: "",
       np_players: 4,
       hideclicked: true,
+      hideresumeclicked: true,
       alert: [],
       api_url: localStorage.getItem("api_url"),
       shownalert: [],
       players: [],
       fullscreen: false,
       shownotif: true,
-      user_id: localStorage.getItem("user_id") || 0,
-      user_uid: localStorage.getItem("user_uid"),
       thrown: [],
-      game_id: localStorage.getItem("game_id") || "init",
     };
   },
   computed: {
@@ -526,6 +437,8 @@ export default {
       this.shownalert = this.alert
         .map((v, index) => {
           v = v.replace("origin", document.location.origin);
+          v = v.replace("[puid]", this.user_uid);
+
           return [v, index];
         })
         .slice(this.alert.length >= 4 ? this.alert.length - 4 : 0);
@@ -540,37 +453,55 @@ export default {
     makeReactive: function (o) {
       return reactive(o);
     },
-    initGame: function () {
-      ax.get(`/game/init?np=${this.np_players}`).then((g) => {
-        let game = JSON.parse(g.data);
-        this.game_id = game.uid;
-        this.refreshGame();
+    joinRound: function (ev, round_uid) {
+      ax.get(
+        `/game/${this.game_uid}/${round_uid || this.round_uid}/${
+          this.user_uid
+        }/join`
+      ).then((g) => {
+        localStorage.setItem("porder", g.data.order);
+        localStorage.setItem("round_uid", this.round_uid);
+        let npath = `?game_uid=${this.game_uid}&round_uid=${this.round_uid}&user_uid=${this.user_uid}`;
+        if (window.location.search != npath) window.location.search = npath;
+
+        console.log(this.user_uid);
+        //this.childComponentRef.refreshGame();
       });
     },
+
+    initRound: function () {
+      ax.get(`/game/${this.game_uid}/${this.round_uid}/init`).then((g) => {
+        console.log(this.user_uid);
+        //this.childComponentRef.refreshGame();
+      });
+    },
+
     refreshGame: function () {
-      ax.get(`/game/${this.game_id}/${this.user_uid || this.user_id}`)
+      if (!this.user_uid) return;
+
+      console.log(this.round_uid);
+      ax.get(`/game/${this.game_uid}/${this.round_uid}/${this.user_uid}`)
         .then((g) => {
-          let game = JSON.parse(g.data);
-          this.game_id = game.uid;
-          if (game.players[this.user_id].uid) {
-            this.myCards = game.players[this.user_id].cards;
-            this.user_uid = game.players[this.user_id].uid;
-            this.user_name = game.players[this.user_id].name;
+          let round = JSON.parse(g.data);
+          //this.game_uid = game.uid;
+          let me = round.players.find((v) => v.uid == this.user_uid);
+          if (me) {
+            this.myCards = me.cards;
+            this.user_name = me.name;
           } else {
-            this.user_uid = "";
             this.myCards = [];
             this.user_name = [];
           }
-          this.np_players = game.players.length;
+          this.np_players = round.players.length;
 
-          this.players = game.players;
-          this.thrown = game.thrownCards;
+          this.players = round.players;
+          this.thrown = round.thrownCards;
 
-          localStorage.setItem("game_id", game.uid);
+          /*localStorage.setItem("game_uid", game.uid);
           localStorage.setItem("user_uid", this.user_uid);
-          localStorage.setItem("user_id", this.user_id);
-          let npath = `?game_id=${game.uid}&user_uid=${this.user_uid}&user_id=${this.user_id}`;
-          if (window.location.search != npath) window.location.search = npath;
+          localStorage.setItem("porder", this.porder);
+          let npath = `?game_uid=${game.uid}&user_uid=${this.user_uid}&porder=${this.porder}`;
+          if (window.location.search != npath) window.location.search = npath;*/
         })
         .catch((v) => {
           /*this.user_uid = "";
@@ -581,14 +512,16 @@ export default {
     throwCard: function () {
       let elm = this.myCards.filter((v) => v.selected);
       if (elm.length == 1)
-        ax.get(`/game/${this.game_id}/${this.user_uid}/${elm[0].id}`).then(
-          (g) => {
-            console.log(g);
-          }
-        );
+        ax.get(
+          `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/${elm[0].id}`
+        ).then((g) => {
+          console.log(g);
+        });
     },
     getCard: function () {
-      ax.get(`/game/${this.game_id}/${this.user_uid}/get`).then((g) => {
+      ax.get(
+        `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/get`
+      ).then((g) => {
         console.log(g);
       });
     },
@@ -596,7 +529,9 @@ export default {
       let sel = this.myCards.filter((v) => v.selected).length;
       if (sel > 0)
         ax.get(
-          `/game/${this.game_id}/${this.user_uid}/down?cards=${this.myCards
+          `/game/${this.game_uid}/${this.round_uid}/${
+            this.user_uid
+          }/down?cards=${this.myCards
             .filter((v) => v.selected)
             .map((v) => v.id)
             .join(",")}`
@@ -605,13 +540,17 @@ export default {
         });
     },
     getthrown: function () {
-      ax.get(`/game/${this.game_id}/${this.user_uid}/getthrown`).then((g) => {
+      ax.get(
+        `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/getthrown`
+      ).then((g) => {
         console.log(g);
       });
     },
 
     revertGame: function () {
-      ax.get(`/game/${this.game_id}/${this.user_uid}/revert`);
+      ax.get(
+        `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/revert`
+      );
     },
 
     getCardDown: function () {
@@ -632,7 +571,9 @@ export default {
         .map((v) => `${mycard.id},${v.order},${v.downi},${v.cardid}`)
         .join(";");
 
-      ax.get(`/game/${this.game_id}/${this.user_uid}/downcard?possible=${ps}`);
+      ax.get(
+        `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/downcard?possible=${ps}`
+      );
     },
     urlchange: function () {
       console.log(this.api_url);
@@ -641,7 +582,7 @@ export default {
 
     usernameChange: function () {
       ax.get(
-        `/game/${this.game_id}/${this.user_uid}/name?name=${this.user_name}`
+        `/game/${this.game_uid}/${this.user_uid}/name?name=${this.user_name}`
       );
     },
 
@@ -687,9 +628,11 @@ export default {
       this.dragging = false;
 
       ax.get(
-        `/game/${this.game_id}/${this.user_uid}/sort/${tp}?cards=${(tp == 100
+        `/game/${this.game_uid}/${this.round_uid}/${
+          this.user_uid
+        }/sort/${tp}?cards=${(tp == 100
           ? this.myCards
-          : this.players[this.user_id].cardsDown[tp]
+          : this.players[this.porder].cardsDown[tp]
         )
           .map((v) => v.id)
           .join(",")}`
@@ -707,42 +650,6 @@ export default {
   opacity: 0.5;
   background: #c8ebfb;
 }
-.btn-img {
-  opacity: 0.4;
-  width: 5vh;
-  transform: rotate(0.25turn);
-  cursor: pointer;
-  src: require(
-    "../assets/cards/SVG-cards-1.3/SVG-cards-1.3/" + "Card_back_01.svg"
-  );
-}
-
-.img-txt {
-  color: black;
-  font-weight: bold;
-  position: absolute;
-  font-size: 1vh;
-  left: 0.3vh;
-  top: 2vh;
-  cursor: pointer;
-}
-
-.btn-container {
-  position: relative;
-}
-
-.btn-img:hover {
-  opacity: 0.8;
-}
-.imp {
-  border: none;
-  opacity: 0.5;
-  font-size: small;
-}
-.inputs {
-  /*display: none;*/
-  background-color: rgba(255, 30, 0, 0.1);
-}
 
 .fullscreen {
   position: fixed;
@@ -759,17 +666,18 @@ export default {
   display: none;
 }
 
-.hide {
-  width: fit-content !important;
-  font-size: x-small;
-  cursor: pointer;
-  transform: rotate(0.25turn);
-  position: relative;
-  left: 50%;
-  color: rgba(255, 30, 0, 0.3);
-  font-weight: bold;
+.wrap {
+  z-index: 1000;
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: white;
 }
-
-.hideclicked {
+.hidawrap {
+  width: 5vw;
+  height: 100vh;
+  background-color: rgba(255, 30, 0, 0.3);
 }
 </style>

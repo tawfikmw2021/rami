@@ -27,42 +27,85 @@ def do_something_whenever_a_request_has_been_handled( msg="", response=None):
     #return response
 
 @socketio.on('join')
-def handle_message(data):
+def joinRoom(data):
     username = data['username']
     room = data['room']
     join_room(room)
     send(username + ' has entered the room.', to=room)
 
-
-@app.route("/game/init")
-def initGame():
+@app.route("/game/new")
+def newGame():
     np = int(request.args.get('np', default="4"))
-    game = Game()
-    game.initPlay(np)
+    game = Game(np)
     res = json.dumps(game.tojson(None), default=lambda o: o.__dict__, 
             sort_keys=True, indent=4)
-    socketio.emit("init", game.uid)
+    socketio.emit("init_game", game.uid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled("new game initiated <a href=\"origin/?game_id="+game.uid+"\">join</a>")
+    do_something_whenever_a_request_has_been_handled(f"new game initiated <a href=\"origin?game_uid={game.uid}\">go</a>")
+    return result
+
+@app.route("/game/<guid>/join")
+def joinGame(guid):
+    game = games[guid]
+    p = game.joinGame()
+    res = p.uid
+    socketio.emit("joind_game", guid+"/"+p.uid)
+    result = Response(res, mimetype='application/json')
+    result.ignore = True
+    do_something_whenever_a_request_has_been_handled(f"new player joined game "+guid)
+    return result
+
+@app.route("/game/<guid>/new")
+def newRound(guid):
+    game = games[guid]
+    round = game.newRound()
+    res = json.dumps(round.tojson(None), default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+    socketio.emit("init_round", round.uid)
+    result = Response(res, mimetype='application/json')
+    result.ignore = True
+    do_something_whenever_a_request_has_been_handled(f"new round initiated <a href=\"origin?game_uid={game.uid}&round_uid={round.uid}&user_uid=[puid]\">go to</a>")
     return result
 
 
-@app.route("/game/init/<ip>")
-def initGame2(ip):
-    return initGame()
+@app.route("/game/<guid>/<ruid>/<puid>/join")
+def joinRound(guid,ruid,puid):
+    game = games[guid]
+    player = game.joinRound(ruid, puid)
+    res = json.dumps(player.tojson(None), default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+    socketio.emit("joind_round", guid+"/"+ruid+"/"+puid)
+    result = Response(res, mimetype='application/json')
+    result.ignore = True
+    do_something_whenever_a_request_has_been_handled(f"user joined round {ruid}")
+    return result
 
 
 
-@app.route("/game/<uid>/<ip>")
-def getGame(uid,ip):
+@app.route("/game/<guid>/<ruid>/init")
+def giveRoundCards(guid, ruid):
+    game = games[guid]
+    round = game.rounds[ruid]
+    round.initRound()
+    res = json.dumps(round.tojson(None), default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+    socketio.emit("init_round", round.uid)
+    result = Response(res, mimetype='application/json')
+    result.ignore = True
+    do_something_whenever_a_request_has_been_handled(f"give cards ${ruid}")
+    return result
+"""
 
-    game = {}
-    if(uid in games):
-        game = games[uid]
-        p = game.registerOrGetPlayer(ip)
+@app.route("/game/<guid>/join")
+def joinGame(guid):
+
+    if(guid in games):
+        game = games[guid]
+        
+        p = game.GetPlayer(ip)
         if(p == None):
-            p = game.registerOrGetPlayer(ip, True)
+            p = game.GetPlayer(ip, True)
             if(p!=None):
                 do_something_whenever_a_request_has_been_handled(str(p.order) + " "+p.name+" joined game")
         if(p != None):
@@ -76,28 +119,43 @@ def getGame(uid,ip):
     result = Response(res, mimetype='application/json')
     result.ignore = True
     return result
+"""
 
-@app.route("/game/<uid>/<ip>/get")
-def getCard(uid,ip):
+@app.route("/game/<guid>/<ruid>/<puid>")
+def getRound(guid, ruid, puid):
+    if((guid in games) and (ruid in games[guid].rounds)):
+        game = games[guid]
+        round = game.rounds[ruid]
 
-    
-    if(uid in games):
-        game = games[uid]
-        p = game.registerOrGetPlayer(ip, False)
-        game.giveToPlayer(p.order)
+        p = game.GetPlayer(puid)
+
+        res = json.dumps(round.tojson(puid), default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+        return Response(res, mimetype='application/json')
+    return Response({"ok" : 1}, mimetype='application/json')
+
+
+
+@app.route("/game/<guid>/<ruid>/<puid>/get")
+def getCard(guid, ruid, puid):
+    game = games[guid]
+    round = game.rounds[ruid]
+
+    p = game.GetPlayer(puid)
+    round.giveToPlayer(p.order)
     
     #res = json.dumps(game, default=lambda o: o.__dict__, 
     #        sort_keys=True, indent=4)
     do_something_whenever_a_request_has_been_handled(str(p.order) + " "+p.name+" get card")
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/name")
-def changeName(uid,ip):
+@app.route("/game/<guid>/<puid>/name")
+def changeName(guid,puid):
     name = request.args.get('name')
     
-    if(uid in games):
-        game = games[uid]
-        p = game.registerOrGetPlayer(ip, False)
+    if(guid in games):
+        game = games[guid]
+        p = game.GetPlayer(puid)
         p.name = name
     
         #res = json.dumps(game, default=lambda o: o.__dict__, 
@@ -105,74 +163,80 @@ def changeName(uid,ip):
         do_something_whenever_a_request_has_been_handled(str(p.order) + " changed name to "+p.name )
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/getthrown")
-def gethrown(uid,ip):
-
-    
-    if(uid in games):
-        game = games[uid]
-        p = game.registerOrGetPlayer(ip, False)
-        card = game.giveToPlayerFromThrown(p.order)
+@app.route("/game/<guid>/<ruid>/<puid>/getthrown")
+def gethrown(guid, ruid, puid):
+    if(guid in games):
+        game = games[guid]
+        round = game.rounds[ruid]
+        p = game.GetPlayer(puid)
+        card = round.giveToPlayerFromThrown(p.order)
     
         #res = json.dumps(game, default=lambda o: o.__dict__, 
         #        sort_keys=True, indent=4)
         do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+" get from thrown " + str(card.number)+" "+card.color )
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/revert")
-def revert(uid,ip):
-    game = games[uid]
-    game.revert()
-    p = game.registerOrGetPlayer(ip)
-    socketio.emit("revert", p.order)
+@app.route("/game/<guid>/<ruid>/<puid>/revert")
+def revert(guid, ruid, puid):
+    if(guid in games):
+        game = games[guid]
+        round = game.rounds[ruid]
+
+    p = game.GetPlayer(puid)
+    round.revert()
+    #socketio.emit("revert", p.order)
     
     #res = json.dumps(game, default=lambda o: o.__dict__, 
     #        sort_keys=True, indent=4)
     do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+" reverted")
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/sort/<tp>")
-def sortCards(uid,ip, tp):
+@app.route("/game/<guid>/<ruid>/<puid>/sort/<tp>")
+def sortCards(guid, ruid, puid, tp):
     cards = request.args.get('cards')
-    game = games[uid]
+    game = games[guid]
+    round = game.rounds[ruid]
 
-    p = game.registerOrGetPlayer(ip)
-    game.sort(p.order, [int(ic) for ic in cards.split(',')], int(tp))
+    p = game.GetPlayer(puid)
+    round.sort(p.order, [int(ic) for ic in cards.split(',')], int(tp))
 
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/down")
-def getDownCards(uid,ip):
+@app.route("/game/<guid>/<ruid>/<puid>/down")
+def getDownCards(guid, ruid, puid):
     cards = request.args.get('cards')
-    game = games[uid]
+    game = games[guid]
+    round = game.rounds[ruid]
 
-    p = game.registerOrGetPlayer(ip)
-    game.getDown(p.order, [int(ic) for ic in cards.split(',')])
+    p = game.GetPlayer(puid)
+    round.getDown(p.order, [int(ic) for ic in cards.split(',')])
 
     do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+ " get down")
     return Response({"ok":True}, mimetype='application/json')
 
-@app.route("/game/<uid>/<ip>/downcard")
-def getDownCards2(uid,ip):
+@app.route("/game/<guid>/<ruid>/<puid>/downcard")
+def getDownCards2(guid, ruid, puid):
     ps = [x.split(",") for x in request.args.get('possible').split(";")]
-    game = games[uid]
+    game = games[guid]
+    round = game.rounds[ruid]
 
-    p = game.registerOrGetPlayer(ip)
+    p = game.GetPlayer(puid)
     if(len(ps)>0):
         pr = ps[0]
-        game.getDownCard(p.order, int(pr[0]), int(pr[1]), int(pr[2]),int(pr[3]) )
+        round.getDownCard(p.order, int(pr[0]), int(pr[1]), int(pr[2]),int(pr[3]) )
 
     do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+ " get down card ")
     return Response({"ok":True}, mimetype='application/json')
 
 
-@app.route("/game/<uid>/<ip>/<ic>")
-def throwCard(uid,ip, ic):
-    game = games[uid]
+@app.route("/game/<guid>/<ruid>/<puid>/<ic>")
+def throwCard(guid, ruid, puid, ic):
+    game = games[guid]
+    round = game.rounds[ruid]
     
 
-    p = game.registerOrGetPlayer(ip)
-    card = game.throwCard(p.order, int(ic))
+    p = game.GetPlayer(puid)
+    card = round.throwCard(p.order, int(ic))
     if(card != None):
         do_something_whenever_a_request_has_been_handled(str(p.order) +" "+ p.name +" throw card " + str(card.number)+ " " +card.color)
     return Response({"ok":True}, mimetype='application/json')
@@ -197,6 +261,9 @@ def defau():
 
 colors = ['hearts', 'diamonds', 'clubs', 'spades']
 
+
+
+
 class Card:
     def __init__(self, number, color, id) -> None:
         self.number = number
@@ -204,15 +271,17 @@ class Card:
         self.id = id
 
 class Player:
+
     cards : list[Card] = []
     cardsDown :list[Card] = []
     order:int = -1
     uid:str
-    def __init__(self, order:int) -> None:
-        self.order = order
+    def __init__(self) -> None:
+        self.taken = False
+        self.order = -1
         self.cards = []
         self.cardsDown = []
-        self.uid = ""
+        self.uid = str(uuid.uuid4())
         self.name = ""
 
     def tojson(self, verbose:bool) -> dict:
@@ -226,7 +295,7 @@ class Player:
     
 
 
-class Game:
+class Round:
     players : list[Player]
     cards : list[Card] 
     thrownCards : list[Card]
@@ -247,21 +316,9 @@ class Game:
         p2.cardsDown[id2].remove(card)
         self.players[ip].cards.append(card)
 
-    def registerOrGetPlayer(self, ip:str, register=False) -> Player:
-        for p in self.players:
-            if(p.uid != "" and p.uid == ip):
-                return p
-        if(register):
-            for p in self.players:
-                if(p.uid =="" and ip.isdecimal() and  p.order == int(ip)):
-                    puid = str(uuid.uuid4())
-                    p.uid = puid
-                    return p
-
-
-    def tojson(self, ip):
+    def tojson(self, puid):
         result = { "uid":self.uid, "cards":len(self.cards), "thrownCards":self.thrownCards[max(len(self.thrownCards) - 4, 0):], 
-                  "players":[ p.tojson(p.uid == ip and p.uid != "") for p in self.players]}
+                  "players":[ p.tojson(p.uid == puid) for p in self.players]}
         return result
     
 
@@ -274,7 +331,6 @@ class Game:
         self.players = []
         self.thrownCards = []
         self.uid = str(uuid.uuid4())
-        games[self.uid] = self
         self.actions = []
 
     def revert(self):
@@ -294,11 +350,6 @@ class Game:
         cards = self.players[ip].cardsDown.pop()
         for c in cards:
             self.players[ip].cards.append(c)
-
-    def initPalayer(self) -> Player:
-        p = Player(len(self.players))
-        self.players.append(p)
-        return p
     
     def giveToPlayer(self, ip:int, c:int = 1, history = True):
         for j in range(c):
@@ -362,19 +413,65 @@ class Game:
             self.players[ip].cardsDown[tp] = nd
       
     
-    def initPlay(self, np:int):
-        game = self
-        for i in range(np):
-            p = game.initPalayer()
+    def initRound(self):
         
         for i in range(7):
             if( i == 0):
-                game.giveToPlayer(game.players[0].order, history=False)
-            for p in game.players:
-                game.giveToPlayer(p.order, 2, history=False)
+                self.giveToPlayer(self.players[0].order, history=False)
+            for p in self.players:
+                self.giveToPlayer(p.order, 2, history=False)
 
     def end(self):
         pass
+
+
+class Game:
+
+    def joinGame(self) -> Player:
+        for p in self.players.values():
+            if(not p.taken):
+                p.taken = True
+                return p
+
+
+    
+    def joinRound(self, ruid, puid) -> Player:
+        player = self.players[puid]
+        round = self.rounds[ruid]
+        
+        if(player not in round.players):
+            round.players.append(player)
+            player.order = len(round.players) - 1
+            return player
+
+    def tojson(self, ip):
+        result = { "uid":self.uid, 
+                  "players":[ p.tojson(p.uid == ip and p.uid != "") for p in self.players.values()]}
+        return result
+    
+
+    def __init__(self, np:int) -> None:
+        self.rounds  : dict[str, Round] = {}
+        self.uid = str(uuid.uuid4())
+        self.players : dict[str, Player] = {}
+        for ip in range(np):
+            player = Player()
+            self.players[player.uid] = player
+        games[self.uid] = self
+
+    
+    def GetPlayer(self, puid:str) -> Player:
+        for p in self.players.values():
+            if(p.uid != "" and p.uid == puid):
+                return p
+
+
+        
+    def newRound(self):
+        round = Round()
+        self.rounds[round.uid] = round
+        return round
+    
 
 games : dict[str, Game] = {}
 
@@ -384,11 +481,11 @@ if(__name__ == "__main__"):
     #socketio.run(app,host="0.0.0.0", ssl_context=context, port=8086)
     socketio.run(app,host="0.0.0.0", port=8086)
 
-    game = Game()
-    p1 = game.initPalayer()
-    p2 = game.initPalayer()
-    p3 = game.initPalayer()
-    p4 = game.initPalayer()
+    game = Round()
+    p1 = game.initPlayer()
+    p2 = game.initPlayer()
+    p3 = game.initPlayer()
+    p4 = game.initPlayer()
 
     assert len(p1.cards) == 0, "player cards should be 0 at first"
     assert len(game.cards) == 108, "game cards should be 108 at first"
