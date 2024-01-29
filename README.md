@@ -24,6 +24,8 @@ npm run lint
 See [Configuration Reference](https://cli.vuejs.org/config/).
 
 ## Python backend
+```
 python -m venv newenv
 ./newenv/Scripts/activate
 pip install -m requirement.txt 
+```
