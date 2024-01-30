@@ -257,7 +257,7 @@
           <div class="d-flex p-1">
             <div class="m-2" style="width: 10vw; overflow: hidden">
               <input
-                v-if="player.uid != undefined"
+                v-if="player.uid.length > 15"
                 class=""
                 style="
                   border: solid 1px rgba(0, 0, 0, 0.1);
@@ -578,12 +578,6 @@ export default {
     urlchange: function () {
       console.log(this.api_url);
       localStorage.setItem("api_url", this.api_url);
-    },
-
-    usernameChange: function () {
-      ax.get(
-        `/game/${this.game_uid}/${this.user_uid}/name?name=${this.user_name}`
-      );
     },
 
     getNumber2: function (number, color) {

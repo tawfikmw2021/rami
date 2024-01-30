@@ -33,6 +33,13 @@ def joinRoom(data):
     join_room(room)
     send(username + ' has entered the room.', to=room)
 
+
+@app.route("/api/games")
+def getGames():
+    res = json.dumps([game.tojson(None)  for game in games.values()], default=lambda o: o.__dict__, 
+            sort_keys=True, indent=4)
+    return res
+
 @app.route("/game/new")
 def newGame():
     np = int(request.args.get('np', default="4"))
@@ -291,6 +298,7 @@ class Player:
             dic["uid"] = self.uid
         else:
             dic["cards"] = [[] for i in self.cards]
+            dic["uid"] = self.uid[0:8]
         return dic
     
 
@@ -446,7 +454,9 @@ class Game:
 
     def tojson(self, ip):
         result = { "uid":self.uid, 
-                  "players":[ p.tojson(p.uid == ip and p.uid != "") for p in self.players.values()]}
+                  "players":[ p.tojson(p.uid == ip and p.uid != "") for p in self.players.values()],
+                  "rounds":[round.tojson(None) for round in self.rounds.values()]
+                  }
         return result
     
 

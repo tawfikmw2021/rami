@@ -1,5 +1,21 @@
 <template>
   <div class="row m-0">
+    <div v-if="!hideclickeddash">
+      <StatsBoard />
+    </div>
+    <div class="col-12" style="background-color: rgba(255, 50, 0, 0.2)">
+      <div
+        class="col-12"
+        @click="hideclickeddashChange"
+        style="cursor: pointer"
+      >
+        <div class="hide" :class="{ hideclicked: hideclickeddash }">
+          {{ hideclickeddash ? ">" : "<" }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row m-0">
     <div v-if="!hideclicked">
       <div class="row m-0" style="">
         <div class="p-0">
@@ -62,7 +78,7 @@
             <div class="row" style="background-color: rgba(255, 50, 0, 0.2)">
               <div
                 class="col-12"
-                @click="hideclickedimps = !hideclickedimps"
+                @click="hideclickedimpsChange"
                 style="cursor: pointer"
               >
                 <div class="hide" :class="{ hideclicked: hideclickedimps }">
@@ -125,11 +141,7 @@
       <div></div>
     </div>
     <div class="col-12" style="background-color: rgba(255, 50, 0, 0.2)">
-      <div
-        class="col-12"
-        @click="hideclicked = !hideclicked"
-        style="cursor: pointer"
-      >
+      <div class="col-12" @click="hideclickedChange" style="cursor: pointer">
         <div class="hide" :class="{ hideclicked: hideclicked }">
           {{ hideclicked ? ">" : "<" }}
         </div>
@@ -147,6 +159,7 @@
 </template>
 <script>
 import RoundBoard from "./RoundBoard.vue";
+import StatsBoard from "./StatsBoard.vue";
 import { ax } from ".//api.js";
 import { ref } from "vue";
 
@@ -167,11 +180,13 @@ export default {
   name: "GameBoard",
   components: {
     RoundBoard,
+    StatsBoard,
   },
   data: function () {
     return {
-      hideclicked: true,
-      hideclickedimps: true,
+      hideclicked: localStorage.getItem("hide") == "true",
+      hideclickedimps: localStorage.getItem("hide2") == "true",
+      hideclickeddash: localStorage.getItem("hidedash") == "true",
       np_players: 4,
       game_uid: localStorage.getItem("game_uid") || "init",
       user_uid: localStorage.getItem("user_uid"),
@@ -189,6 +204,11 @@ export default {
   methods: {
     beforeMount: function () {
       //this.refreshGame();
+    },
+    usernameChange: function () {
+      ax.get(
+        `/game/${this.game_uid}/${this.user_uid}/name?name=${this.user_name}`
+      );
     },
     refreshGame: function () {
       ax.get(`/game/${this.game_uid}/join`).then((g) => {
@@ -230,6 +250,19 @@ export default {
     },
     initRound: function () {
       this.childComponentRef.initRound();
+    },
+    hideclickedimpsChange: function () {
+      localStorage.setItem("hide2", !this.hideclickedimps);
+      this.hideclickedimps = !this.hideclickedimps;
+    },
+
+    hideclickedChange: function () {
+      localStorage.setItem("hide", !this.hideclicked);
+      this.hideclicked = !this.hideclicked;
+    },
+    hideclickeddashChange: function () {
+      localStorage.setItem("hidedash", !this.hideclickeddash);
+      this.hideclickeddash = !this.hideclickeddash;
     },
   },
 };
