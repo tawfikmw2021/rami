@@ -12,7 +12,7 @@
         <div>{{ game.uid }}</div>
         <div class="row">
           <div class="col-2" v-for="player in game.players" :key="player.uid">
-            {{ (round.players.find((v) => v.uid == player.uid) || {}).uid }}
+            {{ getScore(player, round.players, round.scores) }}
           </div>
         </div>
       </div>
@@ -32,6 +32,11 @@ export default {
     };
   },
   methods: {
+    getScore: function (player, players, scores) {
+      let index = players.findIndex((v) => v.uid == player.uid);
+      if (index > -1) return scores[index];
+      else return 0;
+    },
     getGames: function () {
       this.games = [];
       ax.get("/api/games").then((res) => {

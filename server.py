@@ -326,7 +326,9 @@ class Round:
 
     def tojson(self, puid):
         result = { "uid":self.uid, "cards":len(self.cards), "thrownCards":self.thrownCards[max(len(self.thrownCards) - 4, 0):], 
-                  "players":[ p.tojson(p.uid == puid) for p in self.players]}
+                  "players":[ p.tojson(p.uid == puid) for p in self.players],
+                  "scores" : self.scores
+                  }
         return result
     
 
@@ -340,6 +342,8 @@ class Round:
         self.thrownCards = []
         self.uid = str(uuid.uuid4())
         self.actions = []
+        self.scores = []
+
 
     def revert(self):
         if(len(self.actions) == 0):
@@ -428,7 +432,9 @@ class Round:
                 self.giveToPlayer(self.players[0].order, history=False)
             for p in self.players:
                 self.giveToPlayer(p.order, 2, history=False)
-
+        self.scores = []
+        for p in self.players:
+            self.scores.append(100) 
     def end(self):
         pass
 
