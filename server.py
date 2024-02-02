@@ -33,12 +33,14 @@ def joinRoom(data):
     join_room(room)
     send(username + ' has entered the room.', to=room)
 
-
 @app.route("/api/games")
 def getGames():
     res = json.dumps([game.tojson(None)  for game in games.values()], default=lambda o: o.__dict__, 
             sort_keys=True, indent=4)
     return res
+
+
+
 
 @app.route("/game/new")
 def newGame():
@@ -333,8 +335,8 @@ class Round:
     
 
     def __init__(self) -> str:
-        initialCards = [[i%13, colors[int(i/26)], i] for i in range(104)] + [[0, '', 104], [0, '', 105],[0, '', 106],[0, '', 107]]
-        #random.seed()
+        initialCards = [[i%13+1, colors[int(i/26)], i] for i in range(104)] + [[0, '', 104], [0, '', 105],[0, '', 106],[0, '', 107]]
+        random.seed()
         initialCards = sorted(initialCards, key=lambda c : random.random())
         #random.shuffle(initialCards)
         self.cards = [Card(c[0], c[1], c[2]) for c in initialCards]

@@ -1,93 +1,19 @@
 <template>
   <div class="row m-0">
-    <div v-if="!hideclickeddash">
-      <StatsBoard />
-    </div>
-    <div class="col-12" style="background-color: rgba(255, 50, 0, 0.2)">
-      <div
-        class="col-12"
-        @click="hideclickeddashChange"
-        style="cursor: pointer"
-      >
-        <div class="hide" :class="{ hideclicked: hideclickeddash }">
-          {{ hideclickeddash ? ">" : "<" }}
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="row m-0">
-    <div v-if="!hideclicked">
+    <div class="p-0" v-if="!hideclicked">
       <div class="row m-0" style="">
         <div class="p-0">
           <div class="form-group">
-            <div v-if="!hideclickedimps" class="row inputs">
-              <div class="imp col-md-6 col-6 px-1">api url</div>
-
-              <input
-                class="imp col-md-6 col-6 px-1"
-                title="api url"
-                v-model="api_url"
-                @change="urlchange"
-              />
-
-              <div class="imp col-md-6 col-6 px-1">game uid</div>
-              <input
-                class="imp col-md-6 col-6 px-1"
-                title="game_uid"
-                v-model="game_uid"
-              />
-
-              <div class="imp col-md-6 col-6 px-1">round uid</div>
-              <input
-                class="imp col-md-6 col-6 px-1"
-                title="user_uid"
-                v-model="currentround"
-              />
-
-              <div class="imp col-md-6 col-6 px-1">user uid</div>
-              <input
-                class="imp col-md-6 col-6 px-1"
-                title="user_uid"
-                v-model="user_uid"
-              />
-
-              <div class="imp col-md-2 col-6 px-1">name</div>
-
-              <input
-                class="imp col-md-2 col-6 px-1"
-                title="user_name"
-                v-model="user_name"
-                @change="usernameChange"
-              />
-
-              <div class="imp col-md-2 col-6 px-1">order</div>
-              <input
-                class="imp col-md-2 col-6 px-1"
-                title="porder"
-                v-model="currentporder"
-                @change="orderChange"
-              />
-
-              <div class="imp col-md-2 col-6 px-1">nb playeres</div>
-              <input
-                class="imp col-md-2 col-6 px-1"
-                title="nb players"
-                v-model="np_players"
-              />
-            </div>
             <div class="row" style="background-color: rgba(255, 50, 0, 0.2)">
-              <div
-                class="col-12"
-                @click="hideclickedimpsChange"
-                style="cursor: pointer"
-              >
-                <div class="hide" :class="{ hideclicked: hideclickedimps }">
-                  {{ hideclickedimps ? ">" : "<" }}
-                </div>
+              <div class="col-12" style="cursor: pointer">
+                <div
+                  class="hide"
+                  :class="{ hideclicked: hideclickedimps }"
+                ></div>
               </div>
             </div>
             <div class="d-flex justify-content-around">
-              <div @click="newGame" class="btn-container">
+              <div @click="newGame" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -97,7 +23,7 @@
                 <span class="img-txt"> new game </span>
               </div>
 
-              <div @click="joinGame" class="btn-container">
+              <div @click="joinGame" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -107,7 +33,7 @@
                 <span class="img-txt"> join game </span>
               </div>
 
-              <div @click="newRound" class="btn-container">
+              <div @click="newRound" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -116,7 +42,7 @@
                 />
                 <span class="img-txt"> new round </span>
               </div>
-              <div @click="() => joinRound()" class="btn-container">
+              <div @click="() => joinRound()" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -125,7 +51,7 @@
                 />
                 <span class="img-txt"> join round </span>
               </div>
-              <div @click="initRound" class="btn-container">
+              <div @click="initRound" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -149,50 +75,32 @@
     </div>
   </div>
   <RoundBoard
-    :porder="currentporder"
     :user_uid="user_uid"
     :game_uid="game_uid"
-    :p_order="currentporder"
     :round_uid="currentround"
     ref="childComponentRef"
   />
 </template>
 <script>
 import RoundBoard from "./RoundBoard.vue";
-import StatsBoard from "./StatsBoard.vue";
-import { ax } from ".//api.js";
+import { ax } from "./api.js";
 import { ref } from "vue";
-
-let query = document.location.search;
-const urlParams = new URLSearchParams(query);
-
-let round_uid = urlParams.get("round_uid");
-let porder = urlParams.get("porder");
-if (round_uid) localStorage.setItem("round_uid", round_uid);
-if (porder) localStorage.setItem("porder", porder);
-
-let game_uid = urlParams.get("game_uid");
-let user_uid = urlParams.get("user_uid");
-if (game_uid) localStorage.setItem("game_uid", game_uid);
-if (user_uid) localStorage.setItem("user_uid", user_uid);
+import { context, saveContext } from "./api";
 
 export default {
   name: "GameBoard",
   components: {
     RoundBoard,
-    StatsBoard,
   },
   data: function () {
     return {
-      hideclicked: localStorage.getItem("hide") == "true",
+      hideclicked: context["hide"],
       hideclickedimps: localStorage.getItem("hide2") == "true",
       hideclickeddash: localStorage.getItem("hidedash") == "true",
       np_players: 4,
-      game_uid: localStorage.getItem("game_uid") || "init",
-      user_uid: localStorage.getItem("user_uid"),
-      currentporder: localStorage.getItem("porder") || "0",
-      currentround: localStorage.getItem("round_uid") || "0",
-      //currentRound: localStorage.getItem("round_uid") || "0",
+      game_uid: context["game_uid"],
+      user_uid: context["user_uid"],
+      currentround: context["round_uid"],
     };
   },
   setup() {
@@ -205,20 +113,13 @@ export default {
     beforeMount: function () {
       //this.refreshGame();
     },
-    usernameChange: function () {
-      ax.get(
-        `/game/${this.game_uid}/${this.user_uid}/name?name=${this.user_name}`
-      );
-    },
+
     refreshGame: function () {
       ax.get(`/game/${this.game_uid}/join`).then((g) => {
         let game = JSON.parse(g.data);
         this.game_uid = game.uid;
         //this.childComponentRef.refreshGame();
       });
-    },
-    orderChange: function () {
-      localStorage.setItem("porder", this.porder);
     },
     newGame: function () {
       ax.get(`/game/new?np=${this.np_players}`).then((g) => {
@@ -233,7 +134,9 @@ export default {
         this.user_uid = g.data;
         console.log(this.user_uid);
         //this.childComponentRef.refreshGame();
-        localStorage.setItem("user_uid", this.user_uid);
+        context["user_uid"] = this.user_uid;
+        context["game_uid"] = this.game_uid;
+        saveContext(context);
         let npath = `?game_uid=${this.game_uid}&user_uid=${this.user_uid}`;
         if (window.location.search != npath) window.location.search = npath;
       });
@@ -257,7 +160,8 @@ export default {
     },
 
     hideclickedChange: function () {
-      localStorage.setItem("hide", !this.hideclicked);
+      context["hide"] = !this.hideclicked;
+      saveContext(context);
       this.hideclicked = !this.hideclicked;
     },
     hideclickeddashChange: function () {
@@ -272,12 +176,15 @@ export default {
 <style>
 .btn-img {
   opacity: 0.4;
-  width: 5vh;
-  transform: rotate(0.25turn);
+  height: 5vh;
+  /*transform: rotate(0.25turn);*/
   cursor: pointer;
   src: require(
     "../assets/cards/SVG-cards-1.3/SVG-cards-1.3/" + "Card_back_01.svg"
   );
+  aspect-ratio: 4/1;
+
+  display: none;
 }
 
 .btn-img:hover {
@@ -297,6 +204,12 @@ export default {
 
 .img-txt {
   color: black;
+  font-size: x-small;
+  cursor: pointer;
+}
+
+.img-txt2 {
+  color: black;
   font-weight: bold;
   position: absolute;
   font-size: 1vh;
@@ -307,6 +220,10 @@ export default {
 
 .btn-container {
   position: relative;
+  background-color: rgba(255, 30, 0, 0.1);
+  cursor: pointer;
+  border-left: solid 1px;
+  text-align: center;
 }
 
 .imp {

@@ -1,42 +1,11 @@
 <template>
   <div
-    class="wrap"
-    style="display: none"
-    :style="{ width: hideresumeclicked ? '5vw' : '100vw' }"
-  >
-    <div class="hidawrap" @click="hideresumeclicked = !hideresumeclicked"></div>
-  </div>
-  <div
-    :style="{ display: 'none!important' }"
-    style="position: relative; border: none; border-radius: 0; opacity: 0.5"
-    class="alert alert-success m-0 row"
-    role="alert"
-  >
-    <div
-      style="height: 50px; overflow: auto; font-size: small"
-      class="col-11 small"
-    >
-      <div v-for="notif in alert" v-bind:key="notif">{{ notif }}</div>
-    </div>
-
-    <button
-      style="border: none"
-      @click="
-        shownotif = false;
-        alert = [];
-      "
-      class="col-1 border-none"
-    >
-      x
-    </button>
-  </div>
-  <div
     style="display: none; height: 100px; width: 200px; border: solid 1px"
     @drop="(ev) => console.log(ev.dataTransfer)"
     @dragover="(ev) => ev.preventDefault()"
   ></div>
   <div class="row m-0" style="">
-    <div class="">
+    <div class="p-0">
       <div class="form-group">
         <div
           class="row"
@@ -53,66 +22,74 @@
           </div>
         </div>
         <div class="d-flex justify-content-around">
-          <div @click="getCard" class="btn-container">
+          <div @click="getCard" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> echri </span>
           </div>
-          <div @click="getCardDown" class="btn-container">
+          <div @click="getCardDown" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> rakked </span>
           </div>
 
-          <div @click="getthrown" class="btn-container">
+          <div @click="getthrown" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> faskel </span>
           </div>
-          <div @click="throwCard" class="btn-container">
+          <div @click="throwCard" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> tayech </span>
           </div>
-          <div @click="getDown" class="btn-container">
+          <!--+ '#svgView(preserveAspectRatio(none))'-->
+          <div @click="getDown" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> ahbet </span>
           </div>
-          <div @click="revertGame" class="btn-container">
+          <div @click="revertGame" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> arje3 </span>
           </div>
-          <div @click="refreshGame" class="btn-container">
+          <div @click="refreshGame" class="btn-container flex-grow-1">
             <img
               class="btn-img"
               v-bind:src="
-                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
               "
             />
             <span class="img-txt"> refresh </span>
@@ -131,7 +108,7 @@
             style="height: 15vh"
             v-bind:src="
               require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
-                'Card_back_01.svg')
+                'Card_back_01.svg') + '#svgView(preserveAspectRatio(none))'
             "
           />
           <draggable
@@ -283,7 +260,8 @@
                     }"
                     v-bind:src="
                       require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
-                        'Card_back_01.svg')
+                        'Card_back_01.svg') +
+                      '#svgView(preserveAspectRatio(none))'
                     "
                   />
                 </div>
@@ -352,7 +330,7 @@
 <script>
 import draggable from "vuedraggable";
 import { reactive } from "vue";
-import { ax, socket } from "./api.js";
+import { ax, socket, context, saveContext } from "./api.js";
 
 /*export const state = reactive({
   connected: false,
@@ -395,7 +373,7 @@ function shuffle(array) {
 
 let id = 1;
 export default {
-  props: ["porder", "user_uid", "game_uid", "p_order", "round_uid"],
+  props: ["user_uid", "game_uid", "round_uid"],
   name: "RoundBoard",
   display: "Simple",
   components: {
@@ -459,8 +437,10 @@ export default {
           this.user_uid
         }/join`
       ).then((g) => {
-        localStorage.setItem("porder", g.data.order);
-        localStorage.setItem("round_uid", this.round_uid);
+        let p = JSON.parse(g.data);
+        context["porder"] = p.order;
+        context["round_uid"] = this.round_uid;
+        saveContext();
         let npath = `?game_uid=${this.game_uid}&round_uid=${this.round_uid}&user_uid=${this.user_uid}`;
         if (window.location.search != npath) window.location.search = npath;
 
@@ -496,18 +476,8 @@ export default {
 
           this.players = round.players;
           this.thrown = round.thrownCards;
-
-          /*localStorage.setItem("game_uid", game.uid);
-          localStorage.setItem("user_uid", this.user_uid);
-          localStorage.setItem("porder", this.porder);
-          let npath = `?game_uid=${game.uid}&user_uid=${this.user_uid}&porder=${this.porder}`;
-          if (window.location.search != npath) window.location.search = npath;*/
         })
-        .catch((v) => {
-          /*this.user_uid = "";
-          this.myCards = [];
-          this.user_name = [];*/
-        });
+        .catch((v) => {});
     },
     throwCard: function () {
       let elm = this.myCards.filter((v) => v.selected);
