@@ -127,11 +127,6 @@ export default {
     },
 
     joinRound(game_uid, round_uid) {
-      context["game_uid"] = game_uid;
-      context["user_uid"] = "";
-      context["round_uid"] = round_uid;
-      console.log(game_uid);
-      saveContext();
       fireEvent("click_round_join", [game_uid, round_uid]);
       this.$emit("join");
     },

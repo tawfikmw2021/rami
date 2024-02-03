@@ -33,7 +33,8 @@ export default {
     refresh: function () {
       this.user_uid = context["user_uid"];
       this.game_uid = context["game_uid"];
-      this.round_uid = context["round_uid"];
+      this.currentround = context["round_uid"];
+      console.log("refresh", this.game_uid, this.currentround, this.user_uid);
     },
 
     getUser: function () {

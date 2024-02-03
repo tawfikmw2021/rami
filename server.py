@@ -20,6 +20,9 @@ from flask_socketio import join_room, leave_room
 
 from flask import send_from_directory
 
+#@app.before_request
+#def do_something_whenever_a_request_comes_in():
+
 #@app.after_request
 def do_something_whenever_a_request_has_been_handled( msg="", response=None):
     # we have a response to manipulate, always return one
@@ -327,7 +330,7 @@ class Player:
         self.order = -1
         self.cards = []
         self.cardsDown = []
-        self.uid = str(uuid.uuid1())
+        self.uid = str(uuid.uuid4())
         self.name = ""
 
     def tojson(self, verbose:bool) -> dict:
@@ -380,7 +383,7 @@ class Round:
         self.cards = [Card(c[0], c[1], c[2]) for c in initialCards]
         self.players = []
         self.thrownCards = []
-        self.uid = str(uuid.uuid1())
+        self.uid = str(uuid.uuid4())
         self.actions = []
         self.scores = []
 
@@ -532,7 +535,7 @@ class Game:
 
     def __init__(self, np:int) -> None:
         self.rounds  : dict[str, Round] = {}
-        self.uid = str(uuid.uuid1())
+        self.uid = str(uuid.uuid4())
         now = datetime.now()
         self.time = now.strftime("%m/%d/%Y, %H:%M:%S")
         self.players : dict[str, Player] = {}

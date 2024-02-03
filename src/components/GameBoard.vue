@@ -122,18 +122,25 @@ export default {
   created() {
     subscribeToEvent("click_game_join", "game_b", (args) => {
       console.log("click_game_join");
+      let joingame = this.game_uid != args[0];
       this.game_uid = args[0];
-      this.joinGame();
+      if (joingame) this.joinGame();
     });
 
     subscribeToEvent("click_round_join", "game_b", (args) => {
       console.log("click_round_join");
       let joingame = this.game_uid != args[0];
+      let joinround = this.currentround != args[1];
+
       this.game_uid = args[0];
       this.currentround = args[1];
-      console.log("ev", args);
+      console.log("ev", args, joingame, joinround);
       if (joingame) this.joinGame().then(() => this.joinRound());
-      else this.joinRound();
+      else if (joinround) this.joinRound();
+      else {
+        context["round_uid"] = this.currentround;
+        saveContext("context_change");
+      }
     });
     subscribeToEvent("click_game_new", "game_b", () => {
       console.log("click_round_new");
@@ -162,11 +169,10 @@ export default {
       });
     },
     joinGame: function () {
-      console.log("join", this.game_uid);
       return ax.get(`/game/${this.game_uid}/join`).then((g) => {
         if (g.data.length > 100) return;
         this.user_uid = g.data;
-        console.log(this.user_uid);
+        console.log("join", this.game_uid, this.user_uid);
         //this.childComponentRef.refreshGame();
         context["user_uid"] = this.user_uid;
         context["game_uid"] = this.game_uid;

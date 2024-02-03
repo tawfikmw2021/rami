@@ -480,6 +480,7 @@ export default {
         context["porder"] = p.order;
         context["user_name"] = p.user_name;
         context["round_uid"] = this.round_uid;
+        console.log("join round", this.game_uid, this.round_uid, this.user_uid);
         saveContext("context_change");
         /*let npath = `?game_uid=${this.game_uid}&round_uid=${this.round_uid}&user_uid=${this.user_uid}`;
         if (window.location.search != npath) window.location.search = npath;*/
