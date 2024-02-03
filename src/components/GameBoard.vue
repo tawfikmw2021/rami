@@ -13,7 +13,7 @@
               </div>
             </div>
             <div class="d-flex justify-content-around">
-              <div @click="newGame" class="btn-container flex-grow-1">
+              <!--div @click="newGame" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -42,7 +42,7 @@
                 />
                 <span class="img-txt"> new round </span>
               </div>
-              <div @click="() => joinRound()" class="btn-container flex-grow-1">
+              <div @click="joinRound" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
                   v-bind:src="
@@ -50,7 +50,8 @@
                   "
                 />
                 <span class="img-txt"> join round </span>
-              </div>
+              </div!-->
+
               <div @click="initRound" class="btn-container flex-grow-1">
                 <img
                   class="btn-img"
@@ -59,6 +60,15 @@
                   "
                 />
                 <span class="img-txt"> init round </span>
+              </div>
+              <div @click="endRound" class="btn-container flex-grow-1">
+                <img
+                  class="btn-img"
+                  v-bind:src="
+                    require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg')
+                  "
+                />
+                <span class="img-txt"> end round </span>
               </div>
             </div>
           </div>
@@ -85,7 +95,7 @@
 import RoundBoard from "./RoundBoard.vue";
 import { ax } from "./api.js";
 import { ref } from "vue";
-import { context, saveContext } from "./api";
+import { context, saveContext, subscribeToEvent } from "./api";
 
 export default {
   name: "GameBoard",
@@ -109,13 +119,35 @@ export default {
       childComponentRef,
     };
   },
-  methods: {
-    beforeMount: function () {
-      //this.refreshGame();
-    },
+  created() {
+    subscribeToEvent("click_game_join", "game_b", (args) => {
+      console.log("click_game_join");
+      this.game_uid = args[0];
+      this.joinGame();
+    });
 
+    subscribeToEvent("click_round_join", "game_b", (args) => {
+      console.log("click_round_join");
+      let joingame = this.game_uid != args[0];
+      this.game_uid = args[0];
+      this.currentround = args[1];
+      console.log("ev", args);
+      if (joingame) this.joinGame().then(() => this.joinRound());
+      else this.joinRound();
+    });
+    subscribeToEvent("click_game_new", "game_b", () => {
+      console.log("click_round_new");
+      this.newGame();
+    });
+
+    subscribeToEvent("click_round_new", "game_b", () => {
+      this.newRound();
+    });
+  },
+  methods: {
     refreshGame: function () {
       ax.get(`/game/${this.game_uid}/join`).then((g) => {
+        console.log();
         let game = JSON.parse(g.data);
         this.game_uid = game.uid;
         //this.childComponentRef.refreshGame();
@@ -130,15 +162,17 @@ export default {
       });
     },
     joinGame: function () {
-      ax.get(`/game/${this.game_uid}/join`).then((g) => {
+      console.log("join", this.game_uid);
+      return ax.get(`/game/${this.game_uid}/join`).then((g) => {
+        if (g.data.length > 100) return;
         this.user_uid = g.data;
         console.log(this.user_uid);
         //this.childComponentRef.refreshGame();
         context["user_uid"] = this.user_uid;
         context["game_uid"] = this.game_uid;
-        saveContext(context);
-        let npath = `?game_uid=${this.game_uid}&user_uid=${this.user_uid}`;
-        if (window.location.search != npath) window.location.search = npath;
+        saveContext("context_change");
+        /*let npath = `?game_uid=${this.game_uid}&user_uid=${this.user_uid}`;
+        if (window.location.search != npath) window.location.search = npath;*/
       });
     },
     newRound: function () {
@@ -153,6 +187,9 @@ export default {
     },
     initRound: function () {
       this.childComponentRef.initRound();
+    },
+    endRound: function () {
+      this.childComponentRef.endRound();
     },
     hideclickedimpsChange: function () {
       localStorage.setItem("hide2", !this.hideclickedimps);

@@ -1,5 +1,6 @@
 <script>
-import { context, ax } from "./api";
+import { context, ax, subscribeToEvent, saveContext } from "./api";
+
 export default {
   name: "userInfo",
   data: function () {
@@ -8,20 +9,46 @@ export default {
       game_uid: context["game_uid"],
       user_uid: context["user_uid"],
       order: context["porder"],
+      user_name: context["user_name"],
       currentround: context["round_uid"],
     };
   },
+  created: function () {
+    console.log("click_game_join3");
+    this.getUser();
+
+    subscribeToEvent("context_change", "uirefresh", () => {
+      this.refresh();
+    });
+  },
   methods: {
     usernameChange: function () {
+      context["user_name"] = this.user_name;
+      saveContext("context_change");
       ax.get(
         `/game/${this.game_uid}/${this.user_uid}/name?name=${this.user_name}`
       );
+    },
+
+    refresh: function () {
+      this.user_uid = context["user_uid"];
+      this.game_uid = context["game_uid"];
+      this.round_uid = context["round_uid"];
+    },
+
+    getUser: function () {
+      ax.get(`/game/${this.game_uid}/${this.user_uid}`).then((v) => {
+        this.user_name = this.user_name || v.data;
+        context["user_name"] = this.user_name;
+        saveContext("context_change");
+      });
     },
   },
 };
 </script>
 
 <template>
+  <button @click="refresh">refresh</button>
   <div class="d-flex flex-column">
     <div class="d-flex border-top border-bottom">
       <div class="imp col-md-6 col-6 px-1">api url</div>

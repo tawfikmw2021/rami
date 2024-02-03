@@ -19,12 +19,17 @@ export const context = (function() {
 })()
 
 console.log(context)
-let game_uid = urlParams.get("game_uid");
+/*let game_uid = urlParams.get("game_uid");
 let round_uid = urlParams.get("round_uid");
-let user_uid = urlParams.get("user_uid");
+let user_uid = urlParams.get("user_uid");*/
+
+/*let game_uid = localStorage.getItem("game_uid");
+let round_uid = localStorage.getItem("round_uid");
+let user_uid = localStorage.getItem("user_uid");
+
 context["game_uid"] = game_uid || context["game_uid"] ;
 context["round_uid"] = round_uid || context["round_uid"] ;
-context["user_uid"] =user_uid || context["user_uid"];
+context["user_uid"] =user_uid || context["user_uid"];*/
 
 localStorage.setItem("game_state",JSON.stringify(context))
 
@@ -50,8 +55,24 @@ let ax = new axios.Axios({
   
   socket.emit("join", { room: "someroom", username: "someuser" });*/
 
-  export function saveContext(){
+  let subscription = {}
+
+  export function subscribeToEvent(ev_name, action_name, action){
+    subscription[ev_name] = subscription[ev_name] || {}
+    subscription[ev_name][action_name] = action
+  }
+
+
+ 
+  export function fireEvent(ev_name, args){
+    Object.values(subscription[ev_name] || {}).forEach(a => a(args))
+  }
+
+  
+
+  export function saveContext(ev_name, args){
     localStorage.setItem("game_state", JSON.stringify(context))
+    fireEvent(ev_name, args)
   }
   
   export {ax}

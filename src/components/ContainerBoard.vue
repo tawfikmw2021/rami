@@ -2,6 +2,7 @@
 import GameBoard from "./GameBoard.vue";
 import StatsBoard from "./StatsBoard.vue";
 import UserInfoBoard from "./UserInfoBoard.vue";
+import { context, saveContext } from "./api";
 
 export default {
   name: "mainBoard",
@@ -49,7 +50,7 @@ export default {
     <div class="entry border last flex-grow-1"></div>
   </div>
   <div class="content" :class="{ focus: focus == 'stats' }">
-    <StatsBoard />
+    <StatsBoard @join="focus = 'game'" />
   </div>
   <div class="content" :class="{ focus: focus == 'info' }">
     <UserInfoBoard />

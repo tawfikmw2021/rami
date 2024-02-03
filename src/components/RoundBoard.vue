@@ -22,6 +22,25 @@
           </div>
         </div>
         <div class="d-flex justify-content-around">
+          <div
+            @click="
+              () => {
+                this.performance = !this.performance;
+                this.refreshGame();
+              }
+            "
+            class="btn-container flex-grow-1"
+          >
+            <img
+              class="btn-img"
+              v-bind:src="
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/Card_back_01.svg') +
+                '#svgView(preserveAspectRatio(none))'
+              "
+            />
+            <span class="img-txt"> teswira kamla wella la </span>
+          </div>
+
           <div @click="getCard" class="btn-container flex-grow-1">
             <img
               class="btn-img"
@@ -104,13 +123,16 @@
         <!--h3>Draggable {{ draggingInfo }}</h3-->
 
         <div class="d-flex justify-content-around">
-          <img
-            style="height: 15vh"
-            v-bind:src="
-              require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
-                'Card_back_01.svg') + '#svgView(preserveAspectRatio(none))'
-            "
-          />
+          <div class="d-flex">
+            <div class="ncards">{{ nremaining }}</div>
+            <img
+              style="height: 15vh"
+              v-bind:src="
+                require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
+                  'Card_back_01.svg') + '#svgView(preserveAspectRatio(none))'
+              "
+            />
+          </div>
           <draggable
             :list="thrown"
             :disabled="false"
@@ -248,11 +270,25 @@
               />
               <span v-else>{{ player.name || player.order }}</span>
             </div>
+
             <div
               class="d-flex"
               :style="{ width: player.cards.length * 0.5 + 15 + 'vh' }"
             >
-              <div v-for="card in player.cards" v-bind:key="card.id">
+              <div class="ncards">{{ player.cards.length }}</div>
+              <div style="width: 0.5vw">
+                <img
+                  :style="{
+                    height: player.cardsDown.length > 0 ? '15vh' : '8vh',
+                  }"
+                  v-bind:src="
+                    require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
+                      'Card_back_01.svg') +
+                    '#svgView(preserveAspectRatio(none))'
+                  "
+                />
+              </div>
+              <!--div v-for="card in player.cards" v-bind:key="card.id">
                 <div style="width: 0.5vw">
                   <img
                     :style="{
@@ -265,7 +301,7 @@
                     "
                   />
                 </div>
-              </div>
+              </div-->
             </div>
             <div
               v-for="(down, index2) in player.cardsDown"
@@ -391,12 +427,14 @@ export default {
       hideclicked: true,
       hideresumeclicked: true,
       alert: [],
+      performance: false,
       api_url: localStorage.getItem("api_url"),
       shownalert: [],
       players: [],
       fullscreen: false,
       shownotif: true,
       thrown: [],
+      nremaining: 0,
     };
   },
   computed: {
@@ -405,7 +443,7 @@ export default {
     },
   },
   beforeCreate: function () {
-    socket.on("update", (...args) => {
+    socket.on("update", (args) => {
       //state.barEvents.push(args);
       this.refreshGame();
     });
@@ -419,8 +457,9 @@ export default {
 
           return [v, index];
         })
-        .slice(this.alert.length >= 4 ? this.alert.length - 4 : 0);
-      console.log("notif", args);
+        .slice(this.alert.length >= 4 ? this.alert.length - 4 : 0)
+        .reverse();
+
       this.shownotif = true;
     });
   },
@@ -439,19 +478,26 @@ export default {
       ).then((g) => {
         let p = JSON.parse(g.data);
         context["porder"] = p.order;
+        context["user_name"] = p.user_name;
         context["round_uid"] = this.round_uid;
-        saveContext();
-        let npath = `?game_uid=${this.game_uid}&round_uid=${this.round_uid}&user_uid=${this.user_uid}`;
-        if (window.location.search != npath) window.location.search = npath;
+        saveContext("context_change");
+        /*let npath = `?game_uid=${this.game_uid}&round_uid=${this.round_uid}&user_uid=${this.user_uid}`;
+        if (window.location.search != npath) window.location.search = npath;*/
 
-        console.log(this.user_uid);
         //this.childComponentRef.refreshGame();
       });
     },
 
     initRound: function () {
       ax.get(`/game/${this.game_uid}/${this.round_uid}/init`).then((g) => {
-        console.log(this.user_uid);
+        //this.childComponentRef.refreshGame();
+      });
+    },
+
+    endRound: function () {
+      ax.get(
+        `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/end`
+      ).then((g) => {
         //this.childComponentRef.refreshGame();
       });
     },
@@ -459,13 +505,13 @@ export default {
     refreshGame: function () {
       if (!this.user_uid) return;
 
-      console.log(this.round_uid);
       ax.get(`/game/${this.game_uid}/${this.round_uid}/${this.user_uid}`)
         .then((g) => {
           let round = JSON.parse(g.data);
           //this.game_uid = game.uid;
           let me = round.players.find((v) => v.uid == this.user_uid);
           if (me) {
+            this.porder = me.order;
             this.myCards = me.cards;
             this.user_name = me.name;
           } else {
@@ -476,6 +522,7 @@ export default {
 
           this.players = round.players;
           this.thrown = round.thrownCards;
+          this.nremaining = round.nremaining;
         })
         .catch((v) => {});
     },
@@ -484,37 +531,36 @@ export default {
       if (elm.length == 1)
         ax.get(
           `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/${elm[0].id}`
-        ).then((g) => {
-          console.log(g);
-        });
+        ).then((g) => {});
     },
     getCard: function () {
       ax.get(
         `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/get`
-      ).then((g) => {
-        console.log(g);
-      });
+      ).then((g) => {});
     },
     getDown: function () {
       let sel = this.myCards.filter((v) => v.selected).length;
-      if (sel > 0)
+      let sel2 = this.players
+        .flatMap((p) => p.cardsDown.flatMap((gc) => gc))
+        .filter((v) => v.selected);
+
+      console.log(sel2);
+      if (sel > 0 && sel2.length <= 1)
         ax.get(
           `/game/${this.game_uid}/${this.round_uid}/${
             this.user_uid
-          }/down?cards=${this.myCards
+          }/down?target=${
+            sel2.length == 1 ? sel2[0].id : -1
+          }&cards=${this.myCards
             .filter((v) => v.selected)
             .map((v) => v.id)
             .join(",")}`
-        ).then((g) => {
-          console.log(g);
-        });
+        ).then((g) => {});
     },
     getthrown: function () {
       ax.get(
         `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/getthrown`
-      ).then((g) => {
-        console.log(g);
-      });
+      ).then((g) => {});
     },
 
     revertGame: function () {
@@ -524,7 +570,6 @@ export default {
     },
 
     getCardDown: function () {
-      console.log("hello");
       let mycard = this.myCards.find((v) => v.selected);
       let possible = this.players.flatMap((player) => {
         var cards = player.cardsDown.flatMap((down, index) =>
@@ -546,7 +591,6 @@ export default {
       );
     },
     urlchange: function () {
-      console.log(this.api_url);
       localStorage.setItem("api_url", this.api_url);
     },
 
@@ -557,11 +601,11 @@ export default {
         case 1:
           return "ace_of_" + color;
         case 11:
-          return "jack_of_" + color + "2";
+          return "jack_of_" + color + (this.performance ? "2" : "");
         case 12:
-          return "queen_of_" + color + "2";
+          return "queen_of_" + color + (this.performance ? "2" : "");
         case 13:
-          return "king_of_" + color + "2";
+          return "king_of_" + color + (this.performance ? "2" : "");
         default:
           return number + "_of_" + color;
       }
@@ -575,7 +619,7 @@ export default {
     checkMove: function (n = 1) {
       return (e) => {
         this.lastdragging = e.draggedContext.index == n - 1;
-        window.console.log(
+        /*window.console.log(
           "Future index: " +
             e.draggedContext.element +
             "  " +
@@ -584,7 +628,7 @@ export default {
             e.draggedContext.futureIndex +
             "  " +
             e.draggedContext.index
-        );
+        );*/
         //e.draggedContext.element.style.overflow = "hidden";
       };
     },
@@ -608,6 +652,10 @@ export default {
 <style scoped>
 .buttons {
   margin-top: 35px;
+}
+
+.ncards {
+  color: rgba(100, 30, 100, 0.5);
 }
 
 .ghost {

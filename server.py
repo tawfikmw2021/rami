@@ -5,6 +5,8 @@ import uuid
 import json
 import flask_json
 from flask_socketio import SocketIO
+from datetime import datetime
+
 
 from flask_socketio import send, emit
 
@@ -35,7 +37,7 @@ def joinRoom(data):
 
 @app.route("/api/games")
 def getGames():
-    res = json.dumps([game.tojson(None)  for game in games.values()], default=lambda o: o.__dict__, 
+    res = json.dumps([game.tojson(None)  for game in reversed(games.values())], default=lambda o: o.__dict__, 
             sort_keys=True, indent=4)
     return res
 
@@ -51,7 +53,7 @@ def newGame():
     socketio.emit("init_game", game.uid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled(f"new game initiated <a href=\"origin?game_uid={game.uid}\">go</a>")
+    do_something_whenever_a_request_has_been_handled(f"new game initiated game_uid={game.uid}")
     return result
 
 @app.route("/game/<guid>/join")
@@ -62,7 +64,7 @@ def joinGame(guid):
     socketio.emit("joind_game", guid+"/"+p.uid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled(f"new player joined game "+guid)
+    do_something_whenever_a_request_has_been_handled(f" player  {p.name if p.name !='' else p.order } joined game "+guid)
     return result
 
 @app.route("/game/<guid>/new")
@@ -74,7 +76,7 @@ def newRound(guid):
     socketio.emit("init_round", round.uid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled(f"new round initiated <a href=\"origin?game_uid={game.uid}&round_uid={round.uid}&user_uid=[puid]\">go to</a>")
+    do_something_whenever_a_request_has_been_handled(f"new round initiated game_uid={game.uid}&round_uid={round.uid}")
     return result
 
 
@@ -87,7 +89,7 @@ def joinRound(guid,ruid,puid):
     socketio.emit("joind_round", guid+"/"+ruid+"/"+puid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled(f"user joined round {ruid}")
+    do_something_whenever_a_request_has_been_handled(f"user  {player.name if player.name !='' else player.order }  joined round {ruid}")
     return result
 
 
@@ -102,8 +104,26 @@ def giveRoundCards(guid, ruid):
     socketio.emit("init_round", round.uid)
     result = Response(res, mimetype='application/json')
     result.ignore = True
-    do_something_whenever_a_request_has_been_handled(f"give cards ${ruid}")
+    do_something_whenever_a_request_has_been_handled(f"give cards {ruid}")
     return result
+
+@app.route("/game/<guid>/<ruid>/<puid>/end")
+def endRound(guid, ruid, puid):
+    if((guid in games) and (ruid in games[guid].rounds)):
+        game = games[guid]
+        round = game.rounds[ruid]
+
+        
+        p = game.GetPlayer(puid)
+        round.end()
+
+        res = json.dumps(round.tojson(None), default=lambda o: o.__dict__, 
+                sort_keys=True, indent=4)
+
+        result = Response(res, mimetype='application/json')
+        do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } ended {ruid}" )
+        do_something_whenever_a_request_has_been_handled(f"score : "+ ",".join([str(s) for s in round.scores]) )
+        return result
 """
 
 @app.route("/game/<guid>/join")
@@ -155,7 +175,7 @@ def getCard(guid, ruid, puid):
     
     #res = json.dumps(game, default=lambda o: o.__dict__, 
     #        sort_keys=True, indent=4)
-    do_something_whenever_a_request_has_been_handled(str(p.order) + " "+p.name+" get card")
+    do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } get card")
     return Response({"ok":True}, mimetype='application/json')
 
 @app.route("/game/<guid>/<puid>/name")
@@ -172,6 +192,17 @@ def changeName(guid,puid):
         do_something_whenever_a_request_has_been_handled(str(p.order) + " changed name to "+p.name )
     return Response({"ok":True}, mimetype='application/json')
 
+@app.route("/game/<guid>/<puid>")
+def getName(guid,puid):
+    
+    if(guid in games):
+        game = games[guid]
+        p = game.GetPlayer(puid)
+        return p.name 
+    
+    return ""
+    
+
 @app.route("/game/<guid>/<ruid>/<puid>/getthrown")
 def gethrown(guid, ruid, puid):
     if(guid in games):
@@ -182,7 +213,7 @@ def gethrown(guid, ruid, puid):
     
         #res = json.dumps(game, default=lambda o: o.__dict__, 
         #        sort_keys=True, indent=4)
-        do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+" get from thrown " + str(card.number)+" "+card.color )
+        do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } get from thrown " + str(card.number)+" "+card.color )
     return Response({"ok":True}, mimetype='application/json')
 
 @app.route("/game/<guid>/<ruid>/<puid>/revert")
@@ -197,7 +228,7 @@ def revert(guid, ruid, puid):
     
     #res = json.dumps(game, default=lambda o: o.__dict__, 
     #        sort_keys=True, indent=4)
-    do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+" reverted")
+    do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } reverted")
     return Response({"ok":True}, mimetype='application/json')
 
 @app.route("/game/<guid>/<ruid>/<puid>/sort/<tp>")
@@ -208,19 +239,22 @@ def sortCards(guid, ruid, puid, tp):
 
     p = game.GetPlayer(puid)
     round.sort(p.order, [int(ic) for ic in cards.split(',')], int(tp))
+    if(tp !="100"):
+        do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } reordered")
 
     return Response({"ok":True}, mimetype='application/json')
 
 @app.route("/game/<guid>/<ruid>/<puid>/down")
 def getDownCards(guid, ruid, puid):
     cards = request.args.get('cards')
+    target = request.args.get("target", "-1")
     game = games[guid]
     round = game.rounds[ruid]
 
     p = game.GetPlayer(puid)
-    round.getDown(p.order, [int(ic) for ic in cards.split(',')])
+    round.getDown(p.order, [int(ic) for ic in cards.split(',')], int(target))
 
-    do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+ " get down")
+    do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } get down")
     return Response({"ok":True}, mimetype='application/json')
 
 @app.route("/game/<guid>/<ruid>/<puid>/downcard")
@@ -234,7 +268,7 @@ def getDownCards2(guid, ruid, puid):
         pr = ps[0]
         round.getDownCard(p.order, int(pr[0]), int(pr[1]), int(pr[2]),int(pr[3]) )
 
-    do_something_whenever_a_request_has_been_handled(str(p.order) +" "+p.name+ " get down card ")
+    do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } get down card ")
     return Response({"ok":True}, mimetype='application/json')
 
 
@@ -247,14 +281,14 @@ def throwCard(guid, ruid, puid, ic):
     p = game.GetPlayer(puid)
     card = round.throwCard(p.order, int(ic))
     if(card != None):
-        do_something_whenever_a_request_has_been_handled(str(p.order) +" "+ p.name +" throw card " + str(card.number)+ " " +card.color)
+        do_something_whenever_a_request_has_been_handled(f"{p.name if p.name != '' else p.order } throw card " + str(card.number)+ " " +card.color)
     return Response({"ok":True}, mimetype='application/json')
 
 
 import os
 @app.route('/<path:path>')
-def send_report(path):
-    if(os.path.exists("dist/"+path)):
+def send_report(path:str):
+    if(os.path.exists("dist/"+path)):# and not path.endswith(".svg")):
         return send_from_directory('dist', path)
     elif(path == "myproject.git"):
         return  send_from_directory('./', ".git")
@@ -278,11 +312,14 @@ class Card:
         self.number = number
         self.color = color
         self.id = id
+    
+    def __eq__(self, __value: object) -> bool:
+        return __value and __value.id == self.id
 
 class Player:
 
     cards : list[Card] = []
-    cardsDown :list[Card] = []
+    cardsDown :list[list[Card]] = []
     order:int = -1
     uid:str
     def __init__(self) -> None:
@@ -290,7 +327,7 @@ class Player:
         self.order = -1
         self.cards = []
         self.cardsDown = []
-        self.uid = str(uuid.uuid4())
+        self.uid = str(uuid.uuid1())
         self.name = ""
 
     def tojson(self, verbose:bool) -> dict:
@@ -310,7 +347,7 @@ class Round:
     cards : list[Card] 
     thrownCards : list[Card]
 
-    def getDownCard(self, ip, ic, ip2, id2, ic2):
+    def getDownCard(self, ip:int, ic, ip2:int, id2:int, ic2:int):
         p1 = self.players[ip]
 
         p2 = self.players[ip2]
@@ -329,6 +366,7 @@ class Round:
     def tojson(self, puid):
         result = { "uid":self.uid, "cards":len(self.cards), "thrownCards":self.thrownCards[max(len(self.thrownCards) - 4, 0):], 
                   "players":[ p.tojson(p.uid == puid) for p in self.players],
+                  "nremaining" : len(self.cards),
                   "scores" : self.scores
                   }
         return result
@@ -342,7 +380,7 @@ class Round:
         self.cards = [Card(c[0], c[1], c[2]) for c in initialCards]
         self.players = []
         self.thrownCards = []
-        self.uid = str(uuid.uuid4())
+        self.uid = str(uuid.uuid1())
         self.actions = []
         self.scores = []
 
@@ -367,6 +405,11 @@ class Round:
     
     def giveToPlayer(self, ip:int, c:int = 1, history = True):
         for j in range(c):
+            if(len(self.cards) == 0) :
+                self.cards = sorted(self.thrownCards[0:len(self.thrownCards) - 4], key = lambda x:random.random())
+                self.thrownCards = self.thrownCards[len(self.thrownCards) - 4::]
+
+
             card = self.cards.pop()
             self.players[ip].cards.append(card)
             if(history):
@@ -399,10 +442,17 @@ class Round:
                     self.actions.append(["throw", ip, card.id])
                 return card
 
-    def getDown(self, ip:int, ics:list[int]):
+    def getDown(self, ip:int, ics:list[int], target:int):
         nd = []
-        self.players[ip].cardsDown.append(nd)
-        self.actions.append(["down", ip])
+        if(target == -1):
+            self.players[ip].cardsDown.append(nd)
+        else:
+            toappend = [d for p in self.players for d in p.cardsDown if Card(-1,-1,target) in d ]
+            if(len(toappend != 1)):return ""
+            nd = toappend[0]
+        
+        
+        self.actions.append(["down", ip, ics[0]])
         cards = self.players[ip].cards
         for ic in ics:
             for card in  cards:
@@ -428,7 +478,7 @@ class Round:
       
     
     def initRound(self):
-        
+        if(len(self.players[0].cards)>0) :return False 
         for i in range(7):
             if( i == 0):
                 self.giveToPlayer(self.players[0].order, history=False)
@@ -438,7 +488,16 @@ class Round:
         for p in self.players:
             self.scores.append(100) 
     def end(self):
-        pass
+        for i in range(len(self.players)):
+            p = self.players[i]
+            if(len(p.cards) == 0):
+                self.scores[i] == -10
+            else :
+                if(len(p.cardsDown) > 0) :
+                    score = sum([ (card.number if (card.number>1 and card.number<10) else 10) for card in  p.cards] )
+                    self.scores[i] = score
+
+
 
 
 class Game:
@@ -456,6 +515,8 @@ class Game:
         round = self.rounds[ruid]
         
         if(player not in round.players):
+            player.cards = []
+            player.cardsDown = []
             round.players.append(player)
             player.order = len(round.players) - 1
             return player
@@ -463,14 +524,17 @@ class Game:
     def tojson(self, ip):
         result = { "uid":self.uid, 
                   "players":[ p.tojson(p.uid == ip and p.uid != "") for p in self.players.values()],
-                  "rounds":[round.tojson(None) for round in self.rounds.values()]
+                  "rounds":[round.tojson(None) for round in self.rounds.values()],
+                  "time" : self.time
                   }
         return result
     
 
     def __init__(self, np:int) -> None:
         self.rounds  : dict[str, Round] = {}
-        self.uid = str(uuid.uuid4())
+        self.uid = str(uuid.uuid1())
+        now = datetime.now()
+        self.time = now.strftime("%m/%d/%Y, %H:%M:%S")
         self.players : dict[str, Player] = {}
         for ip in range(np):
             player = Player()
