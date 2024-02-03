@@ -126,7 +126,8 @@
           <div class="d-flex">
             <div class="ncards">{{ nremaining }}</div>
             <img
-              style="height: 15vh"
+              @click="getCard"
+              style="cursor: pointer; height: 15vh"
               v-bind:src="
                 require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
                   'Card_back_01.svg') + '#svgView(preserveAspectRatio(none))'
@@ -162,7 +163,8 @@
                   v-on:dblclick="element.selected = !element.selected"
                 >
                   <img
-                    style="height: 15vh"
+                    @click="throwCard2"
+                    style="height: 15vh; cursor: pointer"
                     v-bind:src="
                       require('../assets/cards/SVG-cards-1.3/SVG-cards-1.3/' +
                         getNumber2(element.number, element.color) +
@@ -434,6 +436,7 @@ export default {
       fullscreen: false,
       shownotif: true,
       thrown: [],
+      porder: 0,
       nremaining: 0,
     };
   },
@@ -527,6 +530,18 @@ export default {
         })
         .catch((v) => {});
     },
+    throwCard2: function () {
+      this.throwCard();
+      /*let l = this.myCards.length + this.thrown[this.porder].map(v=> v.length).sum();
+      if (l == 15) this.throwCard();
+
+      let elm = this.myCards.filter((v) => v.selected);
+      if (elm.length == 1)
+        ax.get(
+          `/game/${this.game_uid}/${this.round_uid}/${this.user_uid}/${elm[0].id}`
+        ).then((g) => {});*/
+    },
+
     throwCard: function () {
       let elm = this.myCards.filter((v) => v.selected);
       if (elm.length == 1)
